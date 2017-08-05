@@ -162,13 +162,15 @@ LLDSPEC bool_t gdisp_lld_init(GDisplay *g) {
     // Don't flush if we don't need it.
     if (!(g->flags & GDISP_FLG_NEEDFLUSH))
             return;
-    do {
     acquire_bus(g);
       write_cmd(g, ST7586_SET_ROWADDR);
-      write_arg4(g, 0x00, row, 0x00, row); 
+      //write_arg4(g, 0x00, row, 0x00, row); 
+      write_arg4(g, 0, 0, 0, GDISP_SCREEN_HEIGHT); 
       write_cmd(g, ST7586_SET_COLADDR);
-      write_arg4(g, 0x00, 0x00, 0x00, (GDISP_SCREEN_WIDTH/3)-1);
+      write_arg4(g, 0, 0, 0, (GDISP_SCREEN_WIDTH/3)-1);
       write_cmd(g, ST7586_WRITE_DATA);
+    do {
+
       col = 0;
       do {
         // crazy mapping each 3 column pixels to 1 output byte
@@ -189,9 +191,9 @@ LLDSPEC bool_t gdisp_lld_init(GDisplay *g) {
         write_data(g, output, 8);
         col += 3;
       } while ( col < (GDISP_SCREEN_WIDTH_BYTES) );
-    release_bus(g);
+
     } while (row++ < GDISP_SCREEN_HEIGHT);
-    
+    release_bus(g);    
     g->flags &= ~GDISP_FLG_NEEDFLUSH;
   }
 #endif
