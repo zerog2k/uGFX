@@ -24,7 +24,7 @@
 #endif
 #ifndef GDISP_SCREEN_WIDTH
         // leftmost 22 horizontal pixels do not display
-	#define GDISP_SCREEN_WIDTH		384
+	#define GDISP_SCREEN_WIDTH		360
         #define GDISP_SCREEN_WIDTH_BYTES        (GDISP_SCREEN_WIDTH/8)
 #endif
 #ifndef GDISP_INITIAL_CONTRAST
@@ -40,6 +40,7 @@
 
 #define FRAMEBUFFER_SIZE    (GDISP_SCREEN_HEIGHT * GDISP_SCREEN_WIDTH_BYTES)
 static uint8_t display_buffer[GDISP_SCREEN_HEIGHT][GDISP_SCREEN_WIDTH_BYTES];
+#define DISPLAY_OFFSET  21/3      // horizontal shift between display and controller
 
 /*===========================================================================*/
 /* Driver config defaults for backward compatibility.               	     */
@@ -153,26 +154,32 @@ LLDSPEC bool_t gdisp_lld_init(GDisplay *g) {
 
 #if GDISP_HARDWARE_FLUSH
   LLDSPEC void gdisp_lld_flush(GDisplay *g) {
+    uint32_t elapsed = gfxSystemTicks();
     uint16_t  row = 0;
     uint32_t input = 0;
     uint8_t output[8];
-    uint8_t   i, col, byte = 0;
+    #define ROW_OUT_BYTES   (GDISP_SCREEN_WIDTH/3)
+    //uint8_t rowbuf[ROW_OUT_BYTES];
+    uint8_t   i, col, outidx, byte = 0;
 
-     NRF_LOG_INFO("gdisp_lld_flush\n");
     // Don't flush if we don't need it.
-    if (!(g->flags & GDISP_FLG_NEEDFLUSH))
-            return;
+    if (!(g->flags & GDISP_FLG_NEEDFLUSH)) {
+      elapsed = gfxSystemTicks() - elapsed;
+      NRF_LOG_INFO("gdisp_lld_noflush: %d\n", elapsed);
+      return;
+    }
     acquire_bus(g);
       write_cmd(g, ST7586_SET_ROWADDR);
-      //write_arg4(g, 0x00, row, 0x00, row); 
       write_arg4(g, 0, 0, 0, GDISP_SCREEN_HEIGHT); 
       write_cmd(g, ST7586_SET_COLADDR);
-      write_arg4(g, 0, 0, 0, (GDISP_SCREEN_WIDTH/3)-1);
+      write_arg4(g, 0, DISPLAY_OFFSET, 0, DISPLAY_OFFSET + (ROW_OUT_BYTES)-1);
       write_cmd(g, ST7586_WRITE_DATA);
     do {
-
+      // row loop
       col = 0;
+      //outidx = 0;
       do {
+        // column loop
         // crazy mapping each 3 column pixels to 1 output byte
         // so take 3 bytes (24 bits) input, and output 8 bytes to controller
         input = (display_buffer[row][col] << 16) |  (display_buffer[row][col+1] << 8) | (display_buffer[row][col+2]);
@@ -186,15 +193,22 @@ LLDSPEC bool_t gdisp_lld_init(GDisplay *g) {
           if (input & (0b00100000 << 16))
               byte |= 0b00000011;
           output[i] = byte;
+          //rowbuf[outidx+i] = byte;
           input <<= 3;
-        }      
+        }
+
         write_data(g, output, 8);
+        //memcpy(rowbuf, output, 8);
+        //*rowbuf += 8;
+        //outidx += 8;
         col += 3;
       } while ( col < (GDISP_SCREEN_WIDTH_BYTES) );
-
+      //write_data(g, rowbuf, ROW_OUT_BYTES);
     } while (row++ < GDISP_SCREEN_HEIGHT);
     release_bus(g);    
     g->flags &= ~GDISP_FLG_NEEDFLUSH;
+    elapsed = gfxSystemTicks() - elapsed;
+    NRF_LOG_INFO("gdisp_lld_flush: %d\n", elapsed);
   }
 #endif
 
