@@ -1,0 +1,11 @@
+{
+    "name" : "uGFX",
+    "description" : "uGFX",
+    "keywords" : "library",
+    "repository" : {
+        "type" : "git",
+        "url" : "https://git.ugfx.io/uGFX/uGFX.git"
+    },
+    "version" : "0.0.1"    
+
+}
