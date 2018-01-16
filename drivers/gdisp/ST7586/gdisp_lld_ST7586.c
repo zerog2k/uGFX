@@ -65,8 +65,8 @@ static uint8_t display_buffer[GDISP_SCREEN_HEIGHT][GDISP_SCREEN_WIDTH_BYTES];
 #define _CAAAA(c1, a1, a2, a3, a4)  { _CAA(c1, a1, a2); write_arg(g, a3); write_arg(g, a4); }
 
 // Some common routines and macros
-#define _delay(us)		gfxSleepMicroseconds(us)
-#define _delay_ms(ms)		gfxSleepMilliseconds(ms)
+#define _delay(us)		nrf_delay_us(us)  //gfxSleepMicroseconds(us)
+#define _delay_ms(ms)		nrf_delay_ms(ms)  //gfxSleepMilliseconds(ms)
 
 //#define byteaddr(x, y)		(((y) * (GDISP_SCREEN_WIDTH_BYTES)) + ((x)/8))
 #define bitaddr(x)		(1 << (7 - ((x) % 8)))
@@ -103,9 +103,9 @@ LLDSPEC bool_t gdisp_lld_init(GDisplay *g) {
 
 	// Hardware reset
 	setpin_reset(g, 0); // active low
-	gfxSleepMilliseconds(20);
+	_delay_ms(20);
 	setpin_reset(g, 1); 
-	gfxSleepMilliseconds(20);
+	_delay_ms(20);
 
 	acquire_bus(g);
         _C(ST7586_SOFT_RESET);           // soft reset
