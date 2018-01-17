@@ -322,12 +322,27 @@ LLDSPEC bool_t gdisp_lld_init(GDisplay *g) {
             return;
 
           case GDISP_CONTROL_CONTRAST:
+            // g->p.ptr is desired setpoint
+            // g->g.Contrast is existing contrast state in driver
             if ((unsigned)g->p.ptr > 100)
                 g->p.ptr = (void *)100;
+            
             acquire_bus(g);
-            //_CAA(ST7586_SET_VOP, ((((unsigned)g->p.ptr)<<6)/101) & 0x3F, 0x01);
+            while (g->p.ptr != g->g.Contrast) 
+            {
+              // seek contrast setpoint
+              if (g->p.ptr > g->g.Contrast)
+              {
+                _C(ST7586_VOP_INC);
+                g->g.Contrast++;
+              }
+              else if (g->p.ptr < g->g.Contrast)
+              {
+                _C(ST7586_VOP_DEC);
+                g->g.Contrast--;
+              }
+            }
             release_bus(g);
-            g->g.Contrast = (unsigned)g->p.ptr;
             return;
 
           case GDISP_CONTROL_ALL_PIXELS:
